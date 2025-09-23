@@ -17,10 +17,7 @@ variable.
 Usage
 -----
 
-    python 04_mapillary_images.py \
-        --input data/im_meta/mapillary_samples.csv \
-        --token YOUR_MAPILLARY_ACCESS_TOKEN \
-        --output-dir data/images/mapillary
+    python 04_mapillary_images.py --input data/im_meta/mapillary_samples.csv --token MLY|24448759648080414|5ba810a40676897e2f400df4b32af2e7 --output-dir data/images/mapillary
 
 Notes
 -----

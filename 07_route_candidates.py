@@ -11,11 +11,7 @@ and scenic value can be compared.
 Usage
 -----
 
-    python 07_route_candidates.py \
-        --origin-lat 42.539 --origin-lon -71.048 \
-        --dest-lat 42.491 --dest-lon -71.063 \
-        --edge-scores data/geojson/edges_scored.geojson \
-        --output data/geojson/routes.geojson
+    python 07_route_candidates.py --origin-lat 42.539 --origin-lon -71.048 --dest-lat 42.491 --dest-lon -71.063 --edge-scores data/geojson/edges_scored.geojson --output data/geojson/routes.geojson
 
 Parameters
 ----------

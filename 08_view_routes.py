@@ -12,9 +12,7 @@ as a PNG.
 Usage
 -----
 
-    python 08_view_routes.py \
-        --input data/geojson/routes.geojson \
-        --output routes.png
+    python 08_view_routes.py --input data/geojson/routes.geojson --output routes.png
 
 Options
 -------

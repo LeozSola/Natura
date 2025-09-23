@@ -16,10 +16,7 @@ consecutive points.
 Usage
 -----
 
-    python 02_densify_roadpoints.py \
-        --input data/osm/roads.geojson \
-        --step 100 \
-        --output data/osm/samples.geojson
+    python 02_densify_roadpoints.py --input data/osm/roads.geojson --step 100 --output data/osm/samples.geojson
 
 Parameters
 ----------

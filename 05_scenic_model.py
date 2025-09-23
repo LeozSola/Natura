@@ -27,10 +27,7 @@ sum.  You can adjust the weights depending on your preferences.
 Usage
 -----
 
-    python 05_scenic_model.py \
-        --images-dir data/images/mapillary \
-        --metadata data/im_meta/mapillary_samples.csv \
-        --output data/scores/images.csv
+    python 05_scenic_model.py --images-dir data/images/mapillary --metadata data/im_meta/mapillary_samples.csv --output data/scores/images.csv
 
 The script expects JPEG images named ``<image_id>.jpg`` in the
 specified directory and a CSV mapping image IDs to their geographic

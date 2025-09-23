@@ -17,10 +17,7 @@ obtaining a token.
 Usage
 -----
 
-    python 03_mapillary_metadata.py \
-        --input data/osm/samples.geojson \
-        --token YOUR_MAPILLARY_ACCESS_TOKEN \
-        --output data/im_meta/mapillary_samples.csv
+    python 03_mapillary_metadata.py --input data/osm/samples.geojson --token MLY|24448759648080414|5ba810a40676897e2f400df4b32af2e7 --output data/im_meta/mapillary_samples.csv
 
 Parameters
 ----------

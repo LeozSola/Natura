@@ -14,12 +14,7 @@ properties.
 Usage
 -----
 
-    python 06_edge_scores.py \
-        --roads data/osm/roads.geojson \
-        --samples data/osm/samples.geojson \
-        --metadata data/im_meta/mapillary_samples.csv \
-        --image-scores data/scores/images.csv \
-        --output data/geojson/edges_scored.geojson
+    python 06_edge_scores.py --roads data/osm/roads.geojson --samples data/osm/samples.geojson --metadata data/im_meta/mapillary_samples.csv --image-scores data/scores/images.csv --output data/geojson/edges_scored.geojson
 
 Parameters
 ----------
