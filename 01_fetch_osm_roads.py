@@ -54,9 +54,11 @@ configuring your own Overpass instance for offline operation.
 import argparse
 import json
 import os
-from typing import List
+from pathlib import Path
+from typing import List, Optional
 
 import requests
+from natura.cache import DiskCache
 
 
 def build_overpass_query(lat: float, lon: float, radius: int, highways: List[str]) -> str:
@@ -207,13 +209,50 @@ def main() -> None:
         default="data/osm/roads.geojson",
         help="Path to write GeoJSON output (default: data/osm/roads.geojson)",
     )
+    parser.add_argument(
+        "--cache-dir",
+        type=str,
+        default="data/cache",
+        help="Directory for cached Overpass responses",
+    )
+    parser.add_argument(
+        "--cache-ttl",
+        type=float,
+        default=7 * 24 * 3600,
+        help="Cache expiry in seconds (default: 7 days). Set to 0 to disable expiry.",
+    )
+    parser.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="Disable disk caching for Overpass calls",
+    )
     args = parser.parse_args()
 
     highways = [h.strip() for h in args.highways.split(",") if h.strip()]
     print(f"Querying Overpass for {', '.join(highways)} roads around ({args.lat}, {args.lon}) within {args.radius} m")
 
+    cache: Optional[DiskCache] = None
+    if not args.no_cache:
+        ttl = args.cache_ttl if args.cache_ttl > 0 else None
+        cache = DiskCache(Path(args.cache_dir), namespace="overpass", max_age=ttl)
+
     try:
-        overpass_data = fetch_osm_roads(args.lat, args.lon, args.radius, highways, args.endpoint)
+        def _request() -> dict:
+            return fetch_osm_roads(args.lat, args.lon, args.radius, highways, args.endpoint)
+
+        if cache:
+            request_key = DiskCache.key_from_mapping(
+                {
+                    "lat": round(args.lat, 6),
+                    "lon": round(args.lon, 6),
+                    "radius": args.radius,
+                    "highways": highways,
+                    "endpoint": args.endpoint,
+                }
+            )
+            overpass_data = cache.get_or_create(request_key, _request)
+        else:
+            overpass_data = _request()
     except Exception as exc:
         raise SystemExit(f"Failed to fetch data from Overpass: {exc}")
 

@@ -103,6 +103,21 @@ def ensure_dir(path: str) -> None:
         os.makedirs(path, exist_ok=True)
 
 
+def print_progress(completed: int, total: int) -> None:
+    """Render a simple in-place progress bar for terminal users."""
+    if total <= 0:
+        return
+    percent = (completed / total) * 100
+    bar_width = 30
+    filled = int(bar_width * completed / total)
+    bar = "#" * filled + "-" * (bar_width - filled)
+    sys.stdout.write(f"\rProgress: [{bar}] {percent:6.2f}% ({completed}/{total})")
+    sys.stdout.flush()
+    if completed >= total:
+        sys.stdout.write("\n")
+        sys.stdout.flush()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Download Mapillary thumbnails from metadata CSV")
     parser.add_argument("--input", type=str, required=True, help="Path to metadata CSV")
@@ -136,20 +151,26 @@ def main() -> None:
     print(f"Downloading thumbnails for {total} images to {args.output_dir}")
     ensure_dir(args.output_dir)
 
+    if total == 0:
+        print("No images to download; exiting.")
+        return
+
+    progress_enabled = sys.stdout.isatty()
+    progress_step = max(1, total // 20)
+    downloaded = 0
+
     for idx, image_id in enumerate(ids):
         dest_path = os.path.join(args.output_dir, f"{image_id}.jpg")
-        if os.path.exists(dest_path):
-            # Skip existing files
-            continue
-        url = get_thumbnail_url(image_id, args.token)
-        if not url:
-            continue
-        success = download_image(url, dest_path)
-        if not success:
-            continue
-        if (idx + 1) % 50 == 0:
-            print(f"Downloaded {idx + 1}/{total} images")
-    print("Finished downloading thumbnails")
+        if not os.path.exists(dest_path):
+            # Download only if the file is missing
+            url = get_thumbnail_url(image_id, args.token)
+            if url and download_image(url, dest_path):
+                downloaded += 1
+        if progress_enabled:
+            print_progress(idx + 1, total)
+        elif (idx + 1) % progress_step == 0 or idx + 1 == total:
+            print(f"Processed {idx + 1}/{total} images")
+    print(f"Finished downloading thumbnails; fetched {downloaded} new files")
 
 
 if __name__ == "__main__":

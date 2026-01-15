@@ -42,8 +42,10 @@ import csv
 import json
 import os
 from collections import defaultdict
+from pathlib import Path
 from typing import Dict, List
 
+from natura.heatmap import iter_heatmap_points, write_heatmap
 
 def load_geojson(path: str) -> dict:
     with open(path, "r", encoding="utf-8") as f:
@@ -96,6 +98,18 @@ def main() -> None:
         type=str,
         default="data/geojson/edges_scored.geojson",
         help="Output GeoJSON path",
+    )
+    parser.add_argument(
+        "--heatmap-output",
+        type=str,
+        default="data/geojson/scenic_heatmap.geojson",
+        help="Optional GeoJSON of densified scenic points (used for heatmaps)",
+    )
+    parser.add_argument(
+        "--heatmap-step",
+        type=float,
+        default=80.0,
+        help="Spacing in metres when sampling edges for the heatmap (default: 80)",
     )
     args = parser.parse_args()
 
@@ -152,6 +166,14 @@ def main() -> None:
     with open(args.output, "w", encoding="utf-8") as f:
         json.dump(roads, f)
     print(f"Wrote scored edges to {args.output}")
+
+    if args.heatmap_output:
+        heatmap_points = list(iter_heatmap_points(roads, step_m=args.heatmap_step))
+        if heatmap_points:
+            write_heatmap(heatmap_points, Path(args.heatmap_output))
+            print(f"Heatmap points written to {args.heatmap_output} ({len(heatmap_points)} samples)")
+        else:
+            print("No scenic scores available to build heatmap.")
 
 
 if __name__ == "__main__":

@@ -1,52 +1,56 @@
 # Scenic Route Planner MVP
 
-This repository contains a minimal, offline‑friendly prototype for
-exploring scenic routes between two locations.  It follows the plan
-outlined previously: rather than relying on Google’s closed APIs, it
-leverages **OpenStreetMap** for road geometry, **Mapillary** for
-street‑level imagery, and simple heuristics to estimate the scenic
-value of each road segment.  The pipeline is divided into small scripts
-so that you can inspect and run each step independently.
+This repository contains a minimal, offline-friendly prototype for
+exploring scenic routes between two locations. Rather than relying on
+closed APIs, it leverages OpenStreetMap for road geometry, Mapillary for
+street-level imagery, and simple heuristics to estimate the scenic value
+of each area. The pipeline is divided into small scripts so you can run
+and inspect each step independently.
 
-> **Disclaimer:** None of these scripts will function without an
-> internet connection and valid API tokens for Overpass (OSM) and
-> Mapillary.  The code is provided as a working example and a starting
-> point for your own experimentation.
-
+> Disclaimer: None of these scripts will function without an internet
+> connection and valid API tokens for Overpass (OSM) and Mapillary. The
+> code is provided as a working example and a starting point for your
+> own experimentation.
 
 ## Directory structure
 
 ```
-scenic_mvp/
-├── 01_fetch_osm_roads.py      # fetch OSM roads via Overpass
-├── 02_densify_roadpoints.py   # generate sample points along roads
-├── 03_mapillary_metadata.py   # find nearest Mapillary image for each sample
-├── 04_mapillary_images.py     # download thumbnail images
-├── 05_scenic_model.py         # compute heuristic scenicness features
-├── 06_edge_scores.py          # aggregate scenic scores per road
-├── 07_route_candidates.py     # request OSRM routes and score them
-├── 08_view_routes.py          # plot candidate routes with scenic scores
-└── README.md                  # this document
+.
+|-- 01_fetch_osm_roads.py      # fetch OSM roads via Overpass (optional)
+|-- 02_densify_roadpoints.py   # generate sample points along roads (legacy)
+|-- 02_grid_samples.py         # generate uniform grid samples (recommended)
+|-- 03_mapillary_metadata.py   # find nearest Mapillary image for each sample
+|-- 04_mapillary_images.py     # download thumbnail images
+|-- 05_scenic_model.py         # compute heuristic scenicness features
+|-- 06_edge_scores.py          # aggregate scenic scores per road and emit heatmap (optional)
+|-- 06_grid_scores.py          # aggregate scenic scores per grid and emit heatmap
+|-- 07_route_candidates.py     # request OSRM routes and score them using heatmap data
+|-- 08_view_routes.py          # plot candidate routes with scenic scores & heatmap overlay
+|-- natura/
+|   |-- __init__.py            # shared package initializer
+|   |-- cache.py               # disk caching helpers
+|   |-- geo.py                 # geographic utility helpers
+|   `-- heatmap.py             # heatmap sampling + I/O helpers
+|-- README.md                  # this document
+|-- run_mvp.ps1                # helper script for the full pipeline
 ```
 
 Intermediate and output files are written into a `data/` directory at
-the project root by default.  You can override these paths via
-command‑line arguments.
-
+the project root by default. You can override these paths via
+command-line arguments.
 
 ## Installation and dependencies
 
 The scripts are intentionally lightweight and avoid heavy GIS libraries
-like *shapely* or *geopandas*.  The following Python packages are
-required:
+like shapely or geopandas. The following Python packages are required:
 
-- `requests` – for HTTP requests
-- `numpy` and `Pillow` (PIL) – for image processing
-- `matplotlib` – for plotting routes
+- `requests` for HTTP requests
+- `numpy` and `Pillow` (PIL) for image processing
+- `matplotlib` for plotting routes
 
-If you wish to display routes on an interactive map, consider
-installing `folium` or running your own tile server; however, this is
-outside the scope of the MVP.
+If you wish to display routes on an interactive map, consider installing
+`folium` or running your own tile server; however, this is outside the
+scope of the MVP.
 
 You can install the dependencies with pip:
 
@@ -54,185 +58,116 @@ You can install the dependencies with pip:
 pip install requests numpy Pillow matplotlib
 ```
 
+## Recommended grid-based pipeline
 
-## Step‑by‑step pipeline
+The grid-based approach creates a uniform lattice of sample points to
+reduce coverage bias. This produces a more even scenic surface for
+routing.
 
-The pipeline is designed to be executed sequentially.  Each step
-produces files consumed by the next.  The typical workflow is as
-follows:
+Quick start scripts:
+- `run_prepare_grid.ps1` pulls Mapillary data once for a grid area and writes the scenic heatmap.
+- `run_routes.ps1` recomputes routes + HTML from the existing heatmap without re-downloading imagery.
 
-### 1. Fetch roads from OSM
-
-```
-python scenic_mvp/01_fetch_osm_roads.py \
-  --lat 42.539 --lon -71.048 \
-  --radius 5000 \
-  --highways motor,primary,secondary,tertiary,residential \
-  --output data/osm/roads.geojson
-```
-
-This script contacts the Overpass API to retrieve all road segments
-matching the specified highway types within a radius (in metres) of
-the centre point.  The result is stored as `roads.geojson`.
-
-### 2. Densify road segments
+### 1. Build grid samples
 
 ```
-python scenic_mvp/02_densify_roadpoints.py \
-  --input data/osm/roads.geojson \
-  --step 100 \
-  --output data/osm/samples.geojson
+python 02_grid_samples.py   --center-lat 42.539 --center-lon -71.048   --radius 5000   --step 200   --output data/osm/grid_samples.geojson
 ```
 
-The densify step takes each road polyline and samples points along it
-every `step` metres.  For each sample point it also records the
-bearing (direction) of travel.  The output `samples.geojson` will be
-used to query imagery services.
-
-### 3. Discover Mapillary images
+### 2. Discover Mapillary images
 
 ```
-python scenic_mvp/03_mapillary_metadata.py \
-  --input data/osm/samples.geojson \
-  --token $MAPILLARY_TOKEN \
-  --limit 500 \
-  --output data/im_meta/mapillary_samples.csv
+python 03_mapillary_metadata.py   --input data/osm/grid_samples.geojson   --token $MAPILLARY_TOKEN   --limit 500   --output data/im_meta/mapillary_grid.csv
 ```
 
 For each sample point, this script calls the Mapillary Graph API to
-retrieve the nearest image.  The `sample_index` column in the CSV
-corresponds to the index of the sample feature in `samples.geojson`.
-Specify `--limit` during testing to process only the first N samples.
+retrieve the nearest image. The output includes `image_distance_m`, which
+is used to drop overly distant matches downstream.
 
-### 4. Download thumbnails
-
-```
-python scenic_mvp/04_mapillary_images.py \
-  --input data/im_meta/mapillary_samples.csv \
-  --token $MAPILLARY_TOKEN \
-  --limit 500 \
-  --output-dir data/images/mapillary
-```
-
-Using the image IDs recorded in the metadata, this script fetches a
-1024‑px wide thumbnail for each image and stores it under the
-specified directory.  Existing files are skipped to avoid duplicate
-downloads.
-
-### 5. Compute heuristic scenicness features
+### 3. Download thumbnails
 
 ```
-python scenic_mvp/05_scenic_model.py \
-  --images-dir data/images/mapillary \
-  --metadata data/im_meta/mapillary_samples.csv \
-  --output data/scores/images.csv
+python 04_mapillary_images.py   --input data/im_meta/mapillary_grid.csv   --token $MAPILLARY_TOKEN   --limit 500   --output-dir data/images/mapillary
 ```
 
-This step processes each downloaded image and computes four
-heuristics: vegetation ratio, sky ratio, water ratio and colourfulness.
-These are combined into an overall `scenic_score`.  The output
-`images.csv` contains one row per image with its coordinates and
-features.
-
-### 6. Aggregate scenic scores to road segments
+### 4. Compute heuristic scenicness features
 
 ```
-python scenic_mvp/06_edge_scores.py \
-  --roads data/osm/roads.geojson \
-  --samples data/osm/samples.geojson \
-  --metadata data/im_meta/mapillary_samples.csv \
-  --image-scores data/scores/images.csv \
-  --output data/geojson/edges_scored.geojson
+python 05_scenic_model.py   --images-dir data/images/mapillary   --metadata data/im_meta/mapillary_grid.csv   --output data/scores/image_scores.csv
 ```
 
-This script links sample points back to their originating road
-segments and averages the `scenic_score` over all samples on that
-segment.  If a segment has no samples (for example, no nearby
-images), its score is `null` and its `n_samples` property is zero.
-
-### 7. Request routes and evaluate scenicness
+### 5. Build grid scenic heatmap
 
 ```
-python scenic_mvp/07_route_candidates.py \
-  --origin-lat 42.539 --origin-lon -71.048 \
-  --dest-lat 42.491 --dest-lon -71.063 \
-  --edge-scores data/geojson/edges_scored.geojson \
-  --endpoint https://router.project-osrm.org \
-  --step 100 \
-  --output data/geojson/routes.geojson
+python 06_grid_scores.py   --samples data/osm/grid_samples.geojson   --metadata data/im_meta/mapillary_grid.csv   --image-scores data/scores/image_scores.csv   --heatmap-output data/geojson/scenic_grid_heatmap.geojson   --output data/geojson/grid_scored.geojson
 ```
 
-The routing step queries the OSRM API for alternative routes between
-the origin and destination.  It samples points along each route every
-`step` metres and looks up the scenic score of the nearest road
-segment using the results of step 6.  The mean of these values is
-reported as the route’s `scenic_score` property.  The resulting
-`routes.geojson` contains a feature for each alternative with the OSRM
-duration, distance and the computed scenic score.
-
-> **OSRM note:** The public OSRM server is provided for demonstration
-> purposes only and may rate‑limit or reject your requests.  For
-> reliable performance you should run your own OSRM instance using
-> the same OSM extract you used to fetch roads.
-
-### 8. Plot the candidate routes
+### 6. Score route alternatives via scenic heatmap
 
 ```
-python scenic_mvp/08_view_routes.py \
-  --input data/geojson/routes.geojson \
-  --output routes.png
+python 07_route_candidates.py   --origin-lat 42.539 --origin-lon -71.048   --dest-lat 42.491 --dest-lon -71.063   --heatmap data/geojson/scenic_grid_heatmap.geojson   --endpoint https://router.project-osrm.org   --output data/geojson/routes.geojson
 ```
 
-Finally, visualise the alternative routes and their scenic scores on
-a simple lat/lon plot.  Without a basemap this serves purely as a
-sanity check.  For interactive maps or background tiles you can use
-libraries such as Folium or MapLibre once the core pipeline is
-working.
+Routes are ranked using a coverage-weighted scenic score
+(`scenic_effective_score = scenic_score * scenic_coverage`) so that
+routes with sparse coverage are penalized.
 
+### 7. Visualize routes and heatmap
+
+```
+python 08_view_routes.py   --input data/geojson/routes.geojson   --heatmap data/geojson/scenic_grid_heatmap.geojson   --output outputs/routes.html
+```
+
+## Optional road-based pipeline (legacy)
+
+If you want edge-level scores for debugging or comparison, use the
+road-based steps below and then pass `--edge-scores` to
+`07_route_candidates.py` as a fallback.
+
+1) Fetch roads from OSM (`01_fetch_osm_roads.py`)
+2) Densify road segments (`02_densify_roadpoints.py`)
+3) Query Mapillary metadata (`03_mapillary_metadata.py`)
+4) Download thumbnails (`04_mapillary_images.py`)
+5) Compute scenic features (`05_scenic_model.py`)
+6) Aggregate edge scores + heatmap (`06_edge_scores.py`)
+
+## Caching external API calls
+
+Steps 1, 3, and 7 accept `--cache-dir`, `--cache-ttl`, and `--no-cache`
+flags that wrap the Overpass, Mapillary, and OSRM requests with a simple
+disk cache (`natura.cache.DiskCache`). This avoids re-downloading
+identical payloads during iterative development and makes it easier to
+work offline once you have captured the raw responses.
 
 ## Extending this prototype
 
 This MVP deliberately uses simple heuristics and a naive nearest
-neighbour search.  To improve performance and quality you may consider
-the following:
+neighbour search. To improve performance and quality you may consider:
 
-- **Replace the heuristic scenic model** with a proper vision model
-  (e.g. CLIP + aesthetics head) and semantic segmentation to measure
-  sky/water/vegetation more accurately.
-- **Use a spatial index** (e.g. an R‑tree) to speed up nearest
-  neighbour queries when matching route samples to road segments.
-- **Support user preferences** by weighting different scenic attributes
-  (water vs greenery vs vistas) and implementing multi‑objective
-  routing (e.g. via k‑shortest paths or scalarisation).
-- **Integrate additional data sources** such as official scenic
-  byways, elevation profiles and OpenStreetMap `scenic=yes` tags to
-  enrich the scoring.
-- **Comply with API terms** – remember that storing and deriving data
-  from Google imagery is prohibited.  This pipeline uses only
-  open‑licensed imagery from Mapillary, which requires attribution
-  (see Mapillary’s licence for details).
-
+- Replace the heuristic scenic model with a proper vision model.
+- Use a spatial index (e.g. an R-tree) to speed up nearest neighbour
+  queries when matching route samples to scenic points.
+- Support user preferences by weighting different scenic attributes
+  (water vs greenery vs vistas) and implementing multi-objective routing.
+- Integrate additional data sources such as elevation profiles and OSM
+  `scenic=yes` tags to enrich the scoring.
 
 ## Troubleshooting
 
-The scripts will raise exceptions when required inputs are missing or
-API requests fail.  Common issues include:
-
-- **Missing API tokens:** Steps 3 and 4 require a Mapillary access
-  token.  Obtain one from <https://www.mapillary.com/developer/api-documentation/>
+- Missing API tokens: Steps 3 and 4 require a Mapillary access token.
+  Obtain one from https://www.mapillary.com/developer/api-documentation/
   and supply it via `--token` or the `MAPILLARY_TOKEN` environment
   variable.
-- **Network access:** Overpass, Mapillary and OSRM calls all require
-  outbound internet connectivity.  In offline environments you must
-  run your own Overpass/OSRM servers and cache Mapillary images.
-- **Large data volumes:** Sampling roads at very fine intervals will
-  generate many points and API calls.  Start with a coarse step
-  (e.g. 200–300 m) and adjust once you’ve verified the pipeline.
-
+- Network access: Overpass, Mapillary and OSRM calls all require outbound
+  internet connectivity. In offline environments you must run your own
+  Overpass/OSRM servers and cache Mapillary images.
+- Large data volumes: Sampling with very fine steps will generate many
+  points and API calls. Start with a coarse step (e.g. 200-300 m) and
+  adjust once you have verified the pipeline.
 
 ## Licence
 
-This code is provided for educational purposes.  Be sure to respect
-the licences of any external data sources you use (OpenStreetMap
+This code is provided for educational purposes. Be sure to respect the
+licences of any external data sources you use (OpenStreetMap
 contributors, Mapillary, etc.) when deploying or sharing your own
 derived datasets.
