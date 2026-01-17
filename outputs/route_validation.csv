@@ -1,0 +1,6 @@
+pair_id,origin_lat,origin_lon,dest_lat,dest_lon,route_count,scenic_best_index,scenic_best_score,scenic_best_effective_score,scenic_best_coverage,scenic_best_distance_m,shortest_index,shortest_distance_m,shortest_duration_s,shortest_scenic_score,shortest_effective_score,distance_delta_m
+pair_1,42.5389,-71.0481,42.6557,-70.6206,1,,,,,,0,45716.7,2451.2,,,
+pair_2,42.541,-71.12,42.61,-70.9,2,,,,,,1,29482.7,2086,,,
+pair_3,42.47,-71.1,42.7,-70.85,2,1,0.18976711735544236,0.012865567278335075,0.06779661016949153,50089.7,0,44287.3,2809.3,,,5802.399999999994
+pair_4,42.6,-71.2,42.68,-70.88,2,,,,,,0,37517.1,3228.9,,,
+pair_5,42.4,-71.05,42.72,-70.84,2,1,0.13088194773363762,0.012347353559777135,0.09433962264150944,45779.4,1,45779.4,3421.7,0.13088194773363762,0.012347353559777135,0.0

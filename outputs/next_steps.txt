@@ -1,0 +1,27 @@
+Data quality + coverage audit
+- Run .\run_prepare_grid.ps1 with a small radius/step, inspect data/geojson/scenic_grid_heatmap.geojson, and verify coverage bounds + point density on outputs/routes.html.
+- Add a coverage report (percent of grid with valid scenic scores) to confirm you’re not routing on sparse data.
+
+Route scoring validation
+- Pick 5–10 known start/end pairs; compare the “most scenic” route against a baseline shortest route.
+- Record scenic_score, scenic_effective_score, and scenic_coverage to ensure rankings are stable and intuitive.
+
+Deterministic caching + repeatability
+- Confirm cache hits for Mapillary + OSRM by re-running .\run_routes.ps1 and verifying no new API calls.
+- Capture cache size and TTL behavior to ensure dev-loop is fast and predictable.
+
+Model upgrade path
+- Replace heuristic 05_scenic_model.py with a stronger model (e.g., CLIP + aesthetic head + segmentation) and compare results on a fixed image set.
+- Add a small labeled validation set (20–50 images) to verify ranking quality.
+
+Spatial index + performance
+- Replace naive nearest-neighbor with an R-tree or KD-tree for heatmap lookups.
+- Measure route scoring time vs. heatmap size.
+
+Production routing architecture
+- Decouple “prepare grid” (data ingestion) from “route scoring” (fast, cached).
+- Consider hosting the heatmap as a service or tiles to avoid moving large GeoJSON files.
+
+UX hardening
+- Add clear “coverage bounds” and “low coverage warning” in the UI.
+- Provide a one-click rerun button (or simple launcher) for run_routes.ps1.

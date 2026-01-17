@@ -121,6 +121,21 @@ def plot_routes(
                 max_zoom=15,
             ).add_to(m)
 
+            point_step = max(1, len(heatmap_points) // 4000)
+            point_group = folium.FeatureGroup(name="Scenic sample points", show=False)
+            for idx, (lat, lon, _score) in enumerate(heatmap_points):
+                if idx % point_step != 0:
+                    continue
+                folium.CircleMarker(
+                    location=[lat, lon],
+                    radius=2,
+                    color="#1f6feb",
+                    fill=True,
+                    fill_opacity=0.6,
+                    opacity=0.6,
+                ).add_to(point_group)
+            point_group.add_to(m)
+
     # Draw each route as an interactive polyline
     for i, route in enumerate(routes):
         geom = route.get("geometry", {})
@@ -200,6 +215,8 @@ def plot_routes(
       <div style="margin-top: 8px; font-size: 12px; color: #555;">Command:</div>
       <pre id="route-cmd" style="white-space: pre-wrap; font-size: 11px; background: #f4f4f4; padding: 6px;"></pre>
       <button id="copy-cmd">Copy command</button>
+      <button id="rerun-btn" style="margin-top: 6px;">Rerun routes</button>
+      <div id="rerun-status" style="margin-top: 6px; font-size: 11px; color: #666;"></div>
       <div id="bounds-status" style="margin-top: 6px; font-size: 11px; color: #666;"></div>
     </div>
     """
@@ -286,6 +303,32 @@ def plot_routes(
           if (navigator.clipboard && navigator.clipboard.writeText) {{
             navigator.clipboard.writeText(cmd);
           }}
+        }});
+
+        document.getElementById('rerun-btn').addEventListener('click', function() {{
+          var status = document.getElementById('rerun-status');
+          status.textContent = 'Rerunning routes...';
+          var o = originMarker.getLatLng();
+          var d = destMarker.getLatLng();
+          var url = 'http://127.0.0.1:8787/rerun' +
+            '?origin_lat=' + encodeURIComponent(o.lat.toFixed(6)) +
+            '&origin_lon=' + encodeURIComponent(o.lng.toFixed(6)) +
+            '&dest_lat=' + encodeURIComponent(d.lat.toFixed(6)) +
+            '&dest_lon=' + encodeURIComponent(d.lng.toFixed(6));
+          fetch(url).then(function(resp) {{
+            if (!resp.ok) {{
+              throw new Error('HTTP ' + resp.status);
+            }}
+            return resp.json();
+          }}).then(function(data) {{
+            if (data.ok) {{
+              status.textContent = 'Routes updated. Refresh this page.';
+            }} else {{
+              status.textContent = 'Rerun failed: ' + (data.error || 'unknown error');
+            }}
+          }}).catch(function(err) {{
+            status.textContent = 'Rerun failed: ' + err.message + ' (is the local server running?)';
+          }});
         }});
 
         setInputs();
