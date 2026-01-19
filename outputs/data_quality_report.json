@@ -1,0 +1,35 @@
+{
+  "source": "google",
+  "paths": {
+    "metadata_csv": "data\\google\\im_meta\\google_grid.csv",
+    "images_dir": "data\\google\\images",
+    "scores_csv": "data\\google\\scores\\image_scores.csv",
+    "grid_geojson": "data\\google\\osm\\grid_samples.geojson",
+    "heatmap_geojson": "data\\google\\geojson\\scenic_grid_heatmap.geojson"
+  },
+  "metadata": {
+    "rows": 1969,
+    "matched_images": 1455,
+    "unique_images": 1455,
+    "missing_image_files": 0,
+    "match_rate": 0.7389537836465211,
+    "image_distance_m": {
+      "min": 0.653146395854564,
+      "max": 2570.837433210117,
+      "mean": 81.6377469918705
+    }
+  },
+  "scores": {
+    "rows": 1455,
+    "scored_images": 1455,
+    "scenic_score": {
+      "min": 0.04420246623117618,
+      "max": 0.5712887576387573,
+      "mean": 0.28248038159533495
+    }
+  },
+  "grid": {
+    "points": 1969,
+    "heatmap_points": 1399
+  }
+}

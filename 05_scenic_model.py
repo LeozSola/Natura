@@ -90,31 +90,47 @@ def compute_colorfulness(arr: np.ndarray) -> float:
     return std_root + 0.3 * mean_root
 
 
-def compute_pixel_ratios(arr: np.ndarray) -> Tuple[float, float, float]:
-    """Compute vegetation, sky and water pixel ratios.
-
-    Returns three values between 0 and 1 representing the fraction of
-    pixels that meet simple heuristics for green vegetation, blue sky
-    and water.  These heuristics may misclassify pixels but provide a
-    lightweight approximation.
-    """
+def compute_pixel_ratios(
+    arr: np.ndarray,
+    veg_delta: int,
+    veg_min: int,
+    sky_delta: int,
+    sky_min: int,
+    water_blue_delta: int,
+    water_min_blue: int,
+) -> Tuple[float, float, float]:
+    """Compute vegetation, sky and water pixel ratios."""
     r = arr[..., 0].astype(np.int32)
     g = arr[..., 1].astype(np.int32)
     b = arr[..., 2].astype(np.int32)
     total = arr.shape[0] * arr.shape[1]
     # Vegetation: green significantly higher than red and blue
-    veg_mask = (g > r + 20) & (g > b + 20) & (g > 100)
+    veg_mask = (g > r + veg_delta) & (g > b + veg_delta) & (g > veg_min)
     # Sky: blue dominant, moderate brightness
-    sky_mask = (b > g + 10) & (b > r + 10) & (b > 80)
+    sky_mask = (b > g + sky_delta) & (b > r + sky_delta) & (b > sky_min)
     # Water: blue moderately high and green somewhat high relative to red
-    water_mask = (b > r + 20) & (g > r) & (b > 80)
+    water_mask = (b > r + water_blue_delta) & (g > r) & (b > water_min_blue)
     veg_ratio = float(np.sum(veg_mask)) / total
     sky_ratio = float(np.sum(sky_mask)) / total
     water_ratio = float(np.sum(water_mask)) / total
     return veg_ratio, sky_ratio, water_ratio
 
 
-def compute_features(image_path: str) -> Optional[Dict[str, float]]:
+def compute_features(
+    image_path: str,
+    resize: int,
+    colorfulness_norm: float,
+    veg_delta: int,
+    veg_min: int,
+    sky_delta: int,
+    sky_min: int,
+    water_blue_delta: int,
+    water_min_blue: int,
+    weight_green: float,
+    weight_sky: float,
+    weight_water: float,
+    weight_color: float,
+) -> Optional[Dict[str, float]]:
     """Compute the feature set for a single image.
 
     Returns a dictionary of features.  If the image cannot be processed,
@@ -124,17 +140,30 @@ def compute_features(image_path: str) -> Optional[Dict[str, float]]:
         with Image.open(image_path) as im:
             # Convert to RGB and resize to a fixed small size to speed up
             im = im.convert("RGB")
-            im_small = im.resize((256, 256))
+            im_small = im.resize((resize, resize))
             arr = np.array(im_small)
     except Exception as exc:
         print(f"Failed to process {image_path}: {exc}")
         return None
-    veg_ratio, sky_ratio, water_ratio = compute_pixel_ratios(arr)
+    veg_ratio, sky_ratio, water_ratio = compute_pixel_ratios(
+        arr,
+        veg_delta=veg_delta,
+        veg_min=veg_min,
+        sky_delta=sky_delta,
+        sky_min=sky_min,
+        water_blue_delta=water_blue_delta,
+        water_min_blue=water_min_blue,
+    )
     colorfulness = compute_colorfulness(arr)
     # Normalize colorfulness by a typical range (observed approx 0-100)
-    colorfulness_norm = colorfulness / 100.0
+    colorfulness_norm = colorfulness / max(colorfulness_norm, 1e-6)
     # Compute scenic score as weighted sum (tune weights as desired)
-    scenic_score = 0.4 * veg_ratio + 0.3 * sky_ratio + 0.2 * water_ratio + 0.1 * colorfulness_norm
+    scenic_score = (
+        weight_green * veg_ratio
+        + weight_sky * sky_ratio
+        + weight_water * water_ratio
+        + weight_color * colorfulness_norm
+    )
     return {
         "green_ratio": veg_ratio,
         "sky_ratio": sky_ratio,
@@ -170,6 +199,28 @@ def main() -> None:
         default="data/scores/images.csv",
         help="Path to write the computed features as CSV",
     )
+    parser.add_argument("--resize", type=int, default=256, help="Resize images to NxN before scoring (default: 256)")
+    parser.add_argument("--colorfulness-norm", type=float, default=100.0, help="Normalization divisor for colorfulness")
+    parser.add_argument("--veg-delta", type=int, default=20, help="Green dominance delta for vegetation (default: 20)")
+    parser.add_argument("--veg-min", type=int, default=100, help="Minimum green value for vegetation (default: 100)")
+    parser.add_argument("--sky-delta", type=int, default=10, help="Blue dominance delta for sky (default: 10)")
+    parser.add_argument("--sky-min", type=int, default=80, help="Minimum blue value for sky (default: 80)")
+    parser.add_argument(
+        "--water-blue-delta",
+        type=int,
+        default=20,
+        help="Blue dominance delta for water (default: 20)",
+    )
+    parser.add_argument(
+        "--water-min-blue",
+        type=int,
+        default=80,
+        help="Minimum blue value for water (default: 80)",
+    )
+    parser.add_argument("--weight-green", type=float, default=0.4, help="Weight for vegetation ratio")
+    parser.add_argument("--weight-sky", type=float, default=0.3, help="Weight for sky ratio")
+    parser.add_argument("--weight-water", type=float, default=0.2, help="Weight for water ratio")
+    parser.add_argument("--weight-color", type=float, default=0.1, help="Weight for colorfulness")
     args = parser.parse_args()
 
     metadata = load_metadata(args.metadata)
@@ -196,7 +247,21 @@ def main() -> None:
             img_path = os.path.join(args.images_dir, f"{image_id}.jpg")
             if not os.path.isfile(img_path):
                 continue
-            features = compute_features(img_path)
+            features = compute_features(
+                img_path,
+                resize=args.resize,
+                colorfulness_norm=args.colorfulness_norm,
+                veg_delta=args.veg_delta,
+                veg_min=args.veg_min,
+                sky_delta=args.sky_delta,
+                sky_min=args.sky_min,
+                water_blue_delta=args.water_blue_delta,
+                water_min_blue=args.water_min_blue,
+                weight_green=args.weight_green,
+                weight_sky=args.weight_sky,
+                weight_water=args.weight_water,
+                weight_color=args.weight_color,
+            )
             if features is None:
                 continue
             meta = metadata[image_id]

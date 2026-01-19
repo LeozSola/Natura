@@ -1,0 +1,176 @@
+[
+  {
+    "config": {
+      "id": "baseline",
+      "resize": 256,
+      "colorfulness_norm": 100.0,
+      "veg_delta": 20,
+      "veg_min": 100,
+      "sky_delta": 10,
+      "sky_min": 80,
+      "water_blue_delta": 20,
+      "water_min_blue": 80,
+      "weight_green": 0.4,
+      "weight_sky": 0.3,
+      "weight_water": 0.2,
+      "weight_color": 0.1
+    },
+    "summary": {
+      "config_id": "baseline",
+      "min": 0.04420246623117618,
+      "max": 0.5712887576387573,
+      "mean": 0.28248038159533495,
+      "std": 0.07643746156768633,
+      "pairs": 5,
+      "scenic_differs": 2,
+      "scenic_diff_rate": 0.4,
+      "mean_distance_delta_m": 1324.5799999999988,
+      "mean_scenic_best_effective": 0.05756286160633295
+    }
+  },
+  {
+    "config": {
+      "id": "sky_boost",
+      "resize": 256,
+      "colorfulness_norm": 100.0,
+      "veg_delta": 20,
+      "veg_min": 100,
+      "sky_delta": 10,
+      "sky_min": 80,
+      "water_blue_delta": 20,
+      "water_min_blue": 80,
+      "weight_green": 0.3,
+      "weight_sky": 0.4,
+      "weight_water": 0.2,
+      "weight_color": 0.1
+    },
+    "summary": {
+      "config_id": "sky_boost",
+      "min": 0.04420246623117618,
+      "max": 0.6545162967012573,
+      "mean": 0.2985027603136554,
+      "std": 0.0904863365396045,
+      "pairs": 5,
+      "scenic_differs": 2,
+      "scenic_diff_rate": 0.4,
+      "mean_distance_delta_m": 1324.5799999999988,
+      "mean_scenic_best_effective": 0.062034858338499456
+    }
+  },
+  {
+    "config": {
+      "id": "water_boost",
+      "resize": 256,
+      "colorfulness_norm": 100.0,
+      "veg_delta": 20,
+      "veg_min": 100,
+      "sky_delta": 10,
+      "sky_min": 80,
+      "water_blue_delta": 20,
+      "water_min_blue": 80,
+      "weight_green": 0.3,
+      "weight_sky": 0.25,
+      "weight_water": 0.35,
+      "weight_color": 0.1
+    },
+    "summary": {
+      "config_id": "water_boost",
+      "min": 0.04420246623117618,
+      "max": 0.6559445193575073,
+      "mean": 0.29969932309051595,
+      "std": 0.0911422660595684,
+      "pairs": 5,
+      "scenic_differs": 2,
+      "scenic_diff_rate": 0.4,
+      "mean_distance_delta_m": 1324.5799999999988,
+      "mean_scenic_best_effective": 0.062144025469988304
+    }
+  },
+  {
+    "config": {
+      "id": "higher_thresholds",
+      "resize": 256,
+      "colorfulness_norm": 100.0,
+      "veg_delta": 30,
+      "veg_min": 120,
+      "sky_delta": 20,
+      "sky_min": 100,
+      "water_blue_delta": 30,
+      "water_min_blue": 100,
+      "weight_green": 0.4,
+      "weight_sky": 0.3,
+      "weight_water": 0.2,
+      "weight_color": 0.1
+    },
+    "summary": {
+      "config_id": "higher_thresholds",
+      "min": 0.04420246623117618,
+      "max": 0.5555050662325073,
+      "mean": 0.24612204943656135,
+      "std": 0.07104179511893959,
+      "pairs": 5,
+      "scenic_differs": 3,
+      "scenic_diff_rate": 0.6,
+      "mean_distance_delta_m": 2694.179999999999,
+      "mean_scenic_best_effective": 0.0498043121629833
+    }
+  },
+  {
+    "config": {
+      "id": "color_boost",
+      "resize": 256,
+      "colorfulness_norm": 80.0,
+      "veg_delta": 20,
+      "veg_min": 100,
+      "sky_delta": 10,
+      "sky_min": 80,
+      "water_blue_delta": 20,
+      "water_min_blue": 80,
+      "weight_green": 0.3,
+      "weight_sky": 0.3,
+      "weight_water": 0.2,
+      "weight_color": 0.2
+    },
+    "summary": {
+      "config_id": "color_boost",
+      "min": 0.11050616557794045,
+      "max": 0.8026593538312154,
+      "mean": 0.5427844550110433,
+      "std": 0.08772216489575996,
+      "pairs": 5,
+      "scenic_differs": 2,
+      "scenic_diff_rate": 0.4,
+      "mean_distance_delta_m": 1324.5799999999988,
+      "mean_scenic_best_effective": 0.10723229188330527
+    }
+  },
+  {
+    "config": {
+      "id": "resize_384",
+      "resize": 384,
+      "colorfulness_norm": 100.0,
+      "veg_delta": 20,
+      "veg_min": 100,
+      "sky_delta": 10,
+      "sky_min": 80,
+      "water_blue_delta": 20,
+      "water_min_blue": 80,
+      "weight_green": 0.4,
+      "weight_sky": 0.3,
+      "weight_water": 0.2,
+      "weight_color": 0.1
+    },
+    "summary": {
+      "config_id": "resize_384",
+      "min": 0.04455514239894143,
+      "max": 0.570944694044998,
+      "mean": 0.2822495288919797,
+      "std": 0.07626008311649679,
+      "pairs": 5,
+      "scenic_differs": 2,
+      "scenic_diff_rate": 0.4,
+      "mean_distance_delta_m": 1324.5799999999988,
+      "mean_scenic_best_effective": 0.05753403612588137
+    }
+  }
+]

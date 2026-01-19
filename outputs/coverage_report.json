@@ -1,25 +1,25 @@
 {
   "grid": {
-    "total_points": 0,
-    "scored_points": 0,
-    "coverage_ratio": null,
-    "count": 0,
-    "min_lat": null,
-    "min_lon": null,
-    "max_lat": null,
-    "max_lon": null,
-    "min_score": null,
-    "max_score": null,
-    "mean_score": null
+    "total_points": 1969,
+    "scored_points": 1399,
+    "coverage_ratio": 0.7105129507364144,
+    "count": 1969,
+    "min_lat": 42.31432220625224,
+    "min_lon": -71.35293777714999,
+    "max_lat": 42.763477793747896,
+    "max_lon": -70.74326222285016,
+    "min_score": 0.04485051420581636,
+    "max_score": 0.5712887576387573,
+    "mean_score": 0.2840220215320437
   },
   "heatmap": {
-    "count": 13465,
-    "min_lat": 42.3104761,
-    "min_lon": -71.2676585,
-    "max_lat": 42.747065,
-    "max_lon": -70.818085,
-    "min_score": 0.06101605717346472,
-    "max_score": 0.5379836997947859,
-    "mean_score": 0.2706146866408343
+    "count": 1399,
+    "min_lat": 42.31432220625224,
+    "min_lon": -71.35293777714999,
+    "max_lat": 42.763477793747896,
+    "max_lon": -70.75524492288002,
+    "min_score": 0.04485051420581636,
+    "max_score": 0.5712887576387573,
+    "mean_score": 0.2840220215320437
   }
 }

@@ -47,6 +47,12 @@ class RouteHandler(BaseHTTPRequestHandler):
             self._send_json(400, {"ok": False, "error": "Invalid coordinates"})
             return
         source = params.get("source", ["mapillary"])[0]
+        scenic_weight = params.get("scenic_weight", ["0.7"])[0]
+        max_duration_ratio = params.get("max_duration_ratio", ["1.7"])[0]
+        waypoint_count = params.get("waypoint_count", ["6"])[0]
+        waypoint_radius = params.get("waypoint_radius", ["8000"])[0]
+        waypoint_min_distance = params.get("waypoint_min_distance", ["2000"])[0]
+        waypoint_min_separation = params.get("waypoint_min_separation", ["1500"])[0]
 
         cmd = [
             "powershell",
@@ -64,6 +70,18 @@ class RouteHandler(BaseHTTPRequestHandler):
             f"{dest_lon:.6f}",
             "-Source",
             source,
+            "-ScenicWeight",
+            scenic_weight,
+            "-MaxDurationRatio",
+            max_duration_ratio,
+            "-WaypointCount",
+            waypoint_count,
+            "-WaypointRadius",
+            waypoint_radius,
+            "-WaypointMinDistance",
+            waypoint_min_distance,
+            "-WaypointMinSeparation",
+            waypoint_min_separation,
         ]
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, check=False)

@@ -12,6 +12,7 @@ $RADIUS_M   = 25000
 $GRID_STEP  = 200
 $CACHE_DIR  = "data/cache"
 $IMAGE_SIZE = "640x640"
+$SCENIC_CONFIG = "higher_thresholds"
 
 # outputs
 New-Item -ItemType Directory -Force -Path data/google/osm,data/google/im_meta,data/google/images,data/google/scores,data/google/geojson | Out-Null
@@ -46,10 +47,29 @@ python 03_google_streetview.py `
   --images-dir data/google/images
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-python 05_scenic_model.py `
-  --images-dir data/google/images `
-  --metadata data/google/im_meta/google_grid.csv `
-  --output data/google/scores/image_scores.csv
+if ($SCENIC_CONFIG -eq "higher_thresholds") {
+  python 05_scenic_model.py `
+    --images-dir data/google/images `
+    --metadata data/google/im_meta/google_grid.csv `
+    --output data/google/scores/image_scores.csv `
+    --resize 256 `
+    --colorfulness-norm 100 `
+    --veg-delta 30 `
+    --veg-min 120 `
+    --sky-delta 20 `
+    --sky-min 100 `
+    --water-blue-delta 30 `
+    --water-min-blue 100 `
+    --weight-green 0.4 `
+    --weight-sky 0.3 `
+    --weight-water 0.2 `
+    --weight-color 0.1
+} else {
+  python 05_scenic_model.py `
+    --images-dir data/google/images `
+    --metadata data/google/im_meta/google_grid.csv `
+    --output data/google/scores/image_scores.csv
+}
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 python 06_grid_scores.py `

@@ -55,6 +55,11 @@ def plot_routes(
     radius_m: Optional[int] = None,
     heatmap_points: Optional[List[Tuple[float, float, float]]] = None,
     source: str = "mapillary",
+    scenic_weight: float = 0.9,
+    waypoint_count: int = 6,
+    waypoint_radius: float = 8000.0,
+    waypoint_min_distance: float = 2000.0,
+    waypoint_min_separation: float = 1500.0,
 ) -> None:
     if not routes:
         raise SystemExit("No routes found")
@@ -68,6 +73,10 @@ def plot_routes(
 
     # Build map (normal street basemap)
     m = folium.Map(location=[lat0, lon0], zoom_start=12, tiles="OpenStreetMap")
+
+    coverage_label = "Data coverage bounds"
+    if source:
+        coverage_label = f"{source.capitalize()} coverage bounds"
 
     # Optional: draw the search circle
     if radius_m and radius_m > 0:
@@ -104,7 +113,7 @@ def plot_routes(
                 weight=2,
                 fill=True,
                 fill_opacity=0.06,
-                tooltip="Mapillary coverage bounds",
+                tooltip=coverage_label,
             ).add_to(m)
 
             min_score = min(scores)
@@ -154,13 +163,28 @@ def plot_routes(
         effective = props.get("scenic_effective_score")
         coverage = props.get("scenic_coverage")
         rank = props.get("scenic_rank")
+        combined = props.get("combined_score")
+        duration_ratio = props.get("duration_ratio")
+        variant = props.get("route_variant")
+        waypoint_score = props.get("waypoint_score")
+        road_weighting = props.get("road_weighting")
         details = []
+        if variant:
+            details.append(f"variant {variant}")
+        if road_weighting:
+            details.append("road-weighted")
         if scenic is not None:
             details.append(f"scenic {scenic:.3f}")
         if effective is not None:
             details.append(f"effective {effective:.3f}")
+        if combined is not None:
+            details.append(f"combined {combined:.3f}")
+        if duration_ratio is not None:
+            details.append(f"dur x{duration_ratio:.2f}")
         if coverage is not None:
             details.append(f"coverage {coverage:.0%}")
+        if waypoint_score is not None:
+            details.append(f"wp {waypoint_score:.3f}")
         if rank is not None:
             details.append(f"rank {int(rank)}")
         label = f"Route {i}" if not details else f"Route {i} ({', '.join(details)})"
@@ -218,6 +242,10 @@ def plot_routes(
         </div>
         <button id="pick-dest" style="margin-top: 6px;">Pick destination</button>
       </div>
+      <div style="margin-top: 8px;">
+        <label style="font-size: 12px;">Scenic weight: <span id="weight-value"></span></label>
+        <input id="weight-slider" type="range" min="0" max="100" step="1" style="width: 100%;" />
+      </div>
       <div style="margin-top: 8px; font-size: 12px; color: #555;">Command:</div>
       <pre id="route-cmd" style="white-space: pre-wrap; font-size: 11px; background: #f4f4f4; padding: 6px;"></pre>
       <button id="copy-cmd">Copy command</button>
@@ -237,6 +265,13 @@ def plot_routes(
     if sample_layer_name:
         sample_layer_js = f"window['{sample_layer_name}']"
 
+    coverage_label_js = json.dumps(coverage_label)
+    waypoint_count_js = int(waypoint_count)
+    waypoint_radius_js = float(waypoint_radius)
+    waypoint_min_distance_js = float(waypoint_min_distance)
+    waypoint_min_separation_js = float(waypoint_min_separation)
+
+    weight_value = max(0.0, min(1.0, scenic_weight))
     panel_js = f"""
     (function() {{
       function initPanel() {{
@@ -250,8 +285,18 @@ def plot_routes(
         var destMarker = L.marker([{dest_lat}, {dest_lon}], {{draggable: true}}).addTo(map);
         var bounds = {bounds_js};
         var sampleLayer = {sample_layer_js};
+        var coverageLabel = {coverage_label_js};
+        var weightSlider = document.getElementById('weight-slider');
+        var weightValue = document.getElementById('weight-value');
+        var waypointCount = {waypoint_count_js};
+        var waypointRadius = {waypoint_radius_js};
+        var waypointMinDistance = {waypoint_min_distance_js};
+        var waypointMinSeparation = {waypoint_min_separation_js};
+        weightSlider.value = Math.round({weight_value} * 100);
 
         function setInputs() {{
+          var scenicWeight = (parseInt(weightSlider.value, 10) || 0) / 100.0;
+          weightValue.textContent = scenicWeight.toFixed(2);
           document.getElementById('origin-lat').value = originMarker.getLatLng().lat.toFixed(6);
           document.getElementById('origin-lon').value = originMarker.getLatLng().lng.toFixed(6);
           document.getElementById('dest-lat').value = destMarker.getLatLng().lat.toFixed(6);
@@ -260,7 +305,13 @@ def plot_routes(
                     ' -OriginLon ' + originMarker.getLatLng().lng.toFixed(6) +
                     ' -DestLat ' + destMarker.getLatLng().lat.toFixed(6) +
                     ' -DestLon ' + destMarker.getLatLng().lng.toFixed(6) +
-                    ' -Source {source}';
+                    ' -Source {source}' +
+                    ' -ScenicWeight ' + scenicWeight.toFixed(2) +
+                    ' -MaxDurationRatio 1.7' +
+                    ' -WaypointCount ' + waypointCount +
+                    ' -WaypointRadius ' + waypointRadius +
+                    ' -WaypointMinDistance ' + waypointMinDistance +
+                    ' -WaypointMinSeparation ' + waypointMinSeparation;
           document.getElementById('route-cmd').textContent = cmd;
           var status = document.getElementById('bounds-status');
           if (bounds) {{
@@ -269,9 +320,9 @@ def plot_routes(
             var oInside = o.lat >= bounds.minLat && o.lat <= bounds.maxLat && o.lng >= bounds.minLon && o.lng <= bounds.maxLon;
             var dInside = d.lat >= bounds.minLat && d.lat <= bounds.maxLat && d.lng >= bounds.minLon && d.lng <= bounds.maxLon;
             if (oInside && dInside) {{
-              status.textContent = 'Both points are inside Mapillary coverage bounds.';
+              status.textContent = 'Both points are inside ' + coverageLabel + '.';
             }} else {{
-              status.textContent = 'One or more points are outside Mapillary coverage bounds.';
+              status.textContent = 'One or more points are outside ' + coverageLabel + '.';
             }}
           }} else {{
             status.textContent = 'Coverage bounds unavailable.';
@@ -298,6 +349,7 @@ def plot_routes(
         document.getElementById('origin-lon').addEventListener('change', updateMarkerFromInputs);
         document.getElementById('dest-lat').addEventListener('change', updateMarkerFromInputs);
         document.getElementById('dest-lon').addEventListener('change', updateMarkerFromInputs);
+        weightSlider.addEventListener('input', setInputs);
 
         originMarker.on('dragend', setInputs);
         destMarker.on('dragend', setInputs);
@@ -344,12 +396,19 @@ def plot_routes(
           status.textContent = 'Rerunning routes...';
           var o = originMarker.getLatLng();
           var d = destMarker.getLatLng();
+          var scenicWeight = (parseInt(weightSlider.value, 10) || 0) / 100.0;
           var url = 'http://127.0.0.1:8787/rerun' +
             '?origin_lat=' + encodeURIComponent(o.lat.toFixed(6)) +
             '&origin_lon=' + encodeURIComponent(o.lng.toFixed(6)) +
             '&dest_lat=' + encodeURIComponent(d.lat.toFixed(6)) +
             '&dest_lon=' + encodeURIComponent(d.lng.toFixed(6)) +
-            '&source={source}';
+            '&source={source}' +
+            '&scenic_weight=' + encodeURIComponent(scenicWeight.toFixed(2)) +
+            '&max_duration_ratio=1.7' +
+            '&waypoint_count=' + encodeURIComponent(waypointCount) +
+            '&waypoint_radius=' + encodeURIComponent(waypointRadius) +
+            '&waypoint_min_distance=' + encodeURIComponent(waypointMinDistance) +
+            '&waypoint_min_separation=' + encodeURIComponent(waypointMinSeparation);
           fetch(url).then(function(resp) {{
             if (!resp.ok) {{
               throw new Error('HTTP ' + resp.status);
@@ -403,6 +462,36 @@ def main() -> None:
         default="mapillary",
         help="Data source name for rerun command (default: mapillary)",
     )
+    parser.add_argument(
+        "--scenic-weight",
+        type=float,
+        default=0.7,
+        help="Initial scenic weight for the UI slider (0-1, default: 0.7)",
+    )
+    parser.add_argument(
+        "--waypoint-count",
+        type=int,
+        default=6,
+        help="Number of waypoint routes to request (default: 6)",
+    )
+    parser.add_argument(
+        "--waypoint-radius",
+        type=float,
+        default=8000.0,
+        help="Waypoint selection radius in meters (default: 8000)",
+    )
+    parser.add_argument(
+        "--waypoint-min-distance",
+        type=float,
+        default=2000.0,
+        help="Minimum distance from origin/destination for waypoints (default: 2000)",
+    )
+    parser.add_argument(
+        "--waypoint-min-separation",
+        type=float,
+        default=1500.0,
+        help="Minimum separation between waypoint candidates (default: 1500)",
+    )
     args = parser.parse_args()
 
     routes = load_routes(args.input)
@@ -425,6 +514,11 @@ def main() -> None:
         radius_m=args.radius,
         heatmap_points=heatmap_points,
         source=args.source,
+        scenic_weight=args.scenic_weight,
+        waypoint_count=args.waypoint_count,
+        waypoint_radius=args.waypoint_radius,
+        waypoint_min_distance=args.waypoint_min_distance,
+        waypoint_min_separation=args.waypoint_min_separation,
     )
 
 
