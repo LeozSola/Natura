@@ -54,6 +54,7 @@ def plot_routes(
     center_lon: Optional[float] = None,
     radius_m: Optional[int] = None,
     heatmap_points: Optional[List[Tuple[float, float, float]]] = None,
+    source: str = "mapillary",
 ) -> None:
     if not routes:
         raise SystemExit("No routes found")
@@ -128,13 +129,18 @@ def plot_routes(
                     continue
                 folium.CircleMarker(
                     location=[lat, lon],
-                    radius=2,
-                    color="#1f6feb",
+                    radius=4,
+                    color="#d73a49",
                     fill=True,
-                    fill_opacity=0.6,
-                    opacity=0.6,
+                    fill_opacity=0.75,
+                    opacity=0.75,
                 ).add_to(point_group)
             point_group.add_to(m)
+            sample_layer_name = point_group.get_name()
+        else:
+            sample_layer_name = None
+    else:
+        sample_layer_name = None
 
     # Draw each route as an interactive polyline
     for i, route in enumerate(routes):
@@ -215,6 +221,7 @@ def plot_routes(
       <div style="margin-top: 8px; font-size: 12px; color: #555;">Command:</div>
       <pre id="route-cmd" style="white-space: pre-wrap; font-size: 11px; background: #f4f4f4; padding: 6px;"></pre>
       <button id="copy-cmd">Copy command</button>
+      <button id="toggle-samples" style="margin-top: 6px;">Toggle sample points</button>
       <button id="rerun-btn" style="margin-top: 6px;">Rerun routes</button>
       <div id="rerun-status" style="margin-top: 6px; font-size: 11px; color: #666;"></div>
       <div id="bounds-status" style="margin-top: 6px; font-size: 11px; color: #666;"></div>
@@ -225,6 +232,10 @@ def plot_routes(
     bounds_js = "null"
     if bounds:
         bounds_js = f"{{minLat: {bounds[0][0]}, minLon: {bounds[0][1]}, maxLat: {bounds[1][0]}, maxLon: {bounds[1][1]}}}"
+
+    sample_layer_js = "null"
+    if sample_layer_name:
+        sample_layer_js = f"window['{sample_layer_name}']"
 
     panel_js = f"""
     (function() {{
@@ -238,6 +249,7 @@ def plot_routes(
         var originMarker = L.marker([{origin_lat}, {origin_lon}], {{draggable: true}}).addTo(map);
         var destMarker = L.marker([{dest_lat}, {dest_lon}], {{draggable: true}}).addTo(map);
         var bounds = {bounds_js};
+        var sampleLayer = {sample_layer_js};
 
         function setInputs() {{
           document.getElementById('origin-lat').value = originMarker.getLatLng().lat.toFixed(6);
@@ -247,7 +259,8 @@ def plot_routes(
           var cmd = '.\\\\run_routes.ps1 -OriginLat ' + originMarker.getLatLng().lat.toFixed(6) +
                     ' -OriginLon ' + originMarker.getLatLng().lng.toFixed(6) +
                     ' -DestLat ' + destMarker.getLatLng().lat.toFixed(6) +
-                    ' -DestLon ' + destMarker.getLatLng().lng.toFixed(6);
+                    ' -DestLon ' + destMarker.getLatLng().lng.toFixed(6) +
+                    ' -Source {source}';
           document.getElementById('route-cmd').textContent = cmd;
           var status = document.getElementById('bounds-status');
           if (bounds) {{
@@ -305,6 +318,27 @@ def plot_routes(
           }}
         }});
 
+        var toggleBtn = document.getElementById('toggle-samples');
+        if (sampleLayer) {{
+          toggleBtn.addEventListener('click', function() {{
+            if (map.hasLayer(sampleLayer)) {{
+              map.removeLayer(sampleLayer);
+              toggleBtn.textContent = 'Show sample points';
+            }} else {{
+              map.addLayer(sampleLayer);
+              toggleBtn.textContent = 'Hide sample points';
+            }}
+          }});
+          if (map.hasLayer(sampleLayer)) {{
+            toggleBtn.textContent = 'Hide sample points';
+          }} else {{
+            toggleBtn.textContent = 'Show sample points';
+          }}
+        }} else {{
+          toggleBtn.textContent = 'Sample points unavailable';
+          toggleBtn.disabled = true;
+        }}
+
         document.getElementById('rerun-btn').addEventListener('click', function() {{
           var status = document.getElementById('rerun-status');
           status.textContent = 'Rerunning routes...';
@@ -314,7 +348,8 @@ def plot_routes(
             '?origin_lat=' + encodeURIComponent(o.lat.toFixed(6)) +
             '&origin_lon=' + encodeURIComponent(o.lng.toFixed(6)) +
             '&dest_lat=' + encodeURIComponent(d.lat.toFixed(6)) +
-            '&dest_lon=' + encodeURIComponent(d.lng.toFixed(6));
+            '&dest_lon=' + encodeURIComponent(d.lng.toFixed(6)) +
+            '&source={source}';
           fetch(url).then(function(resp) {{
             if (!resp.ok) {{
               throw new Error('HTTP ' + resp.status);
@@ -362,6 +397,12 @@ def main() -> None:
         required=False,
         help="Optional scenic heatmap GeoJSON (from step 6) to overlay",
     )
+    parser.add_argument(
+        "--source",
+        type=str,
+        default="mapillary",
+        help="Data source name for rerun command (default: mapillary)",
+    )
     args = parser.parse_args()
 
     routes = load_routes(args.input)
@@ -383,6 +424,7 @@ def main() -> None:
         center_lon=args.center_lon,
         radius_m=args.radius,
         heatmap_points=heatmap_points,
+        source=args.source,
     )
 
 

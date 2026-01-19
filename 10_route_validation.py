@@ -57,15 +57,21 @@ def main() -> None:
         help="CSV of origin/destination pairs",
     )
     parser.add_argument(
+        "--source",
+        type=str,
+        default="mapillary",
+        help="Data source to validate (mapillary|google)",
+    )
+    parser.add_argument(
         "--heatmap",
         type=str,
-        default="data/geojson/scenic_grid_heatmap.geojson",
-        help="Scenic heatmap GeoJSON path",
+        default="",
+        help="Scenic heatmap GeoJSON path (optional override)",
     )
     parser.add_argument(
         "--fallback-heatmap",
         type=str,
-        default="data/geojson/scenic_heatmap.geojson",
+        default="",
         help="Fallback heatmap path if grid heatmap missing",
     )
     parser.add_argument(
@@ -112,7 +118,16 @@ def main() -> None:
     args = parser.parse_args()
 
     pairs_path = Path(args.pairs)
-    heatmap_path = choose_heatmap(Path(args.heatmap), Path(args.fallback_heatmap))
+    default_heatmap = Path(f"data/{args.source}/geojson/scenic_grid_heatmap.geojson")
+    heatmap_path = choose_heatmap(Path(args.heatmap) if args.heatmap else default_heatmap, Path(args.fallback_heatmap) if args.fallback_heatmap else default_heatmap)
+    if not heatmap_path.exists():
+        fallback = Path(f"data/{args.source}/geojson/scenic_heatmap.geojson")
+        if fallback.exists():
+            heatmap_path = fallback
+        else:
+            legacy = Path("data/geojson/scenic_heatmap.geojson")
+            if legacy.exists():
+                heatmap_path = legacy
     if not heatmap_path.exists():
         raise SystemExit("No heatmap available. Run run_prepare_grid.ps1 first.")
 

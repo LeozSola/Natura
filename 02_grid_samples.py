@@ -62,6 +62,15 @@ def iter_grid_points(center_lat: float, center_lon: float, radius_m: float, step
     return points
 
 
+def build_test_grid_samples() -> List[Tuple[float, float, int, int]]:
+    """Return a fixed 1km grid for a known test area."""
+    center_lat = 42.5389
+    center_lon = -71.0481
+    radius_m = 25_000.0
+    step_m = 1000.0
+    return iter_grid_points(center_lat, center_lon, radius_m, step_m)
+
+
 def build_feature_collection(points: List[Tuple[float, float, int, int]]) -> dict:
     features = []
     for idx, (lat, lon, row, col) in enumerate(points):
@@ -93,6 +102,11 @@ def main() -> None:
     parser.add_argument("--radius", type=float, default=25_000.0, help="Radius in meters (default: 25000)")
     parser.add_argument("--step", type=float, default=200.0, help="Grid spacing in meters (default: 200)")
     parser.add_argument(
+        "--test-grid",
+        action="store_true",
+        help="Use a fixed 1km grid test case (overrides center/radius/step)",
+    )
+    parser.add_argument(
         "--output",
         type=str,
         default="data/osm/grid_samples.geojson",
@@ -100,7 +114,10 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    points = iter_grid_points(args.center_lat, args.center_lon, args.radius, args.step)
+    if args.test_grid:
+        points = build_test_grid_samples()
+    else:
+        points = iter_grid_points(args.center_lat, args.center_lon, args.radius, args.step)
     fc = build_feature_collection(points)
     ensure_dir(args.output)
     with open(args.output, "w", encoding="utf-8") as f:

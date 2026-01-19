@@ -53,4 +53,4 @@ python 06_grid_scores.py `
   --output data/mapillary/geojson/grid_scored.geojson
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-Write-Host "Grid data prepared. Scenic heatmap: data/mapillary/geojson/scenic_grid_heatmap.geojson"
+Write-Host "Mapillary data prepared. Scenic heatmap: data/mapillary/geojson/scenic_grid_heatmap.geojson"

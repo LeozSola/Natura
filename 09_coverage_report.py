@@ -87,21 +87,27 @@ def parse_heatmap(heatmap_path: Path) -> List[Tuple[float, float, Optional[float
 def main() -> None:
     parser = argparse.ArgumentParser(description="Report scenic data coverage and bounds")
     parser.add_argument(
+        "--source",
+        type=str,
+        default="mapillary",
+        help="Data source to report on (mapillary|google)",
+    )
+    parser.add_argument(
         "--grid-scored",
         type=str,
-        default="data/geojson/grid_scored.geojson",
-        help="Grid-scored GeoJSON path",
+        default="",
+        help="Grid-scored GeoJSON path (optional override)",
     )
     parser.add_argument(
         "--heatmap",
         type=str,
-        default="data/geojson/scenic_grid_heatmap.geojson",
-        help="Scenic heatmap GeoJSON path",
+        default="",
+        help="Scenic heatmap GeoJSON path (optional override)",
     )
     parser.add_argument(
         "--fallback-heatmap",
         type=str,
-        default="data/geojson/scenic_heatmap.geojson",
+        default="",
         help="Fallback heatmap path if the grid heatmap is missing",
     )
     parser.add_argument(
@@ -114,7 +120,7 @@ def main() -> None:
 
     report: Dict[str, Dict[str, Optional[float]]] = {}
 
-    grid_path = Path(args.grid_scored)
+    grid_path = Path(args.grid_scored) if args.grid_scored else Path(f"data/{args.source}/geojson/grid_scored.geojson")
     if grid_path.exists():
         grid_points, total, scored = parse_grid(grid_path)
         summary = summarize_points(grid_points)
@@ -140,9 +146,14 @@ def main() -> None:
             "mean_score": None,
         }
 
-    heatmap_path = Path(args.heatmap)
+    heatmap_path = Path(args.heatmap) if args.heatmap else Path(f"data/{args.source}/geojson/scenic_grid_heatmap.geojson")
     if not heatmap_path.exists():
-        heatmap_path = Path(args.fallback_heatmap)
+        fallback = Path(args.fallback_heatmap) if args.fallback_heatmap else Path(
+            f"data/{args.source}/geojson/scenic_heatmap.geojson"
+        )
+        if not fallback.exists():
+            fallback = Path("data/geojson/scenic_heatmap.geojson")
+        heatmap_path = fallback
     if heatmap_path.exists():
         heatmap_points = parse_heatmap(heatmap_path)
         report["heatmap"] = summarize_points(heatmap_points)

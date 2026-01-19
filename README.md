@@ -20,12 +20,14 @@ and inspect each step independently.
 |-- 02_densify_roadpoints.py   # generate sample points along roads (legacy)
 |-- 02_grid_samples.py         # generate uniform grid samples (recommended)
 |-- 03_mapillary_metadata.py   # find nearest Mapillary image for each sample
+|-- 03_google_streetview.py    # fetch Google Street View metadata + images
 |-- 04_mapillary_images.py     # download thumbnail images
 |-- 05_scenic_model.py         # compute heuristic scenicness features
 |-- 06_edge_scores.py          # aggregate scenic scores per road and emit heatmap (optional)
 |-- 06_grid_scores.py          # aggregate scenic scores per grid and emit heatmap
 |-- 07_route_candidates.py     # request OSRM routes and score them using heatmap data
 |-- 08_view_routes.py          # plot candidate routes with scenic scores & heatmap overlay
+|-- 11_route_server.py         # local HTTP rerun server for the HTML UI
 |-- natura/
 |   |-- __init__.py            # shared package initializer
 |   |-- cache.py               # disk caching helpers
@@ -33,6 +35,9 @@ and inspect each step independently.
 |   `-- heatmap.py             # heatmap sampling + I/O helpers
 |-- README.md                  # this document
 |-- run_mvp.ps1                # helper script for the full pipeline
+|-- run_prepare_mapillary.ps1  # build scenic heatmap from Mapillary
+|-- run_prepare_google.ps1     # build scenic heatmap from Google Street View
+|-- run_routes.ps1             # rerun routes + HTML from existing heatmap
 ```
 
 Intermediate and output files are written into a `data/` directory at
@@ -65,8 +70,9 @@ reduce coverage bias. This produces a more even scenic surface for
 routing.
 
 Quick start scripts:
-- `run_prepare_grid.ps1` pulls Mapillary data once for a grid area and writes the scenic heatmap.
-- `run_routes.ps1` recomputes routes + HTML from the existing heatmap without re-downloading imagery.
+- `run_prepare_mapillary.ps1` pulls Mapillary data once for a grid area and writes the scenic heatmap.
+- `run_prepare_google.ps1` pulls Google Street View data once for a grid area and writes the scenic heatmap.
+- `run_routes.ps1` recomputes routes + HTML from the selected heatmap without re-downloading imagery (`-Source mapillary|google`).
 
 ### 1. Build grid samples
 

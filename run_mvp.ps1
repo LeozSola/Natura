@@ -13,11 +13,11 @@ $DEST_LON   = -70.6206
 $OVERPASS_RADIUS = 25000
 $GRID_STEP       = 200
 $CACHE_DIR       = "data/cache"
-$GRID_HEATMAP_PATH    = "data/geojson/scenic_grid_heatmap.geojson"
+$GRID_HEATMAP_PATH    = "data/mapillary/geojson/scenic_grid_heatmap.geojson"
 $HEATMAP_MAX_DISTANCE = 250
 
 # outputs
-New-Item -ItemType Directory -Force -Path data/osm,data/im_meta,data/images,data/scores,data/geojson,outputs | Out-Null
+New-Item -ItemType Directory -Force -Path data/mapillary/osm,data/mapillary/im_meta,data/mapillary/images,data/mapillary/scores,data/mapillary/geojson,data/geojson,outputs | Out-Null
 
 if (-not $SkipPrep) {
     # 2b) Uniform grid samples for imagery coverage
@@ -26,7 +26,7 @@ if (-not $SkipPrep) {
       --center-lon $ORIGIN_LON `
       --radius $OVERPASS_RADIUS `
       --step $GRID_STEP `
-      --output data/osm/grid_samples.geojson
+      --output data/mapillary/osm/grid_samples.geojson
 
     if (-not $env:MAPILLARY_TOKEN) {
       Write-Error "MAPILLARY_TOKEN is not set. Export it before running this script."
@@ -35,30 +35,30 @@ if (-not $SkipPrep) {
 
     # 3) Mapillary metadata (reads $env:MAPILLARY_TOKEN if set)
     python 03_mapillary_metadata.py `
-      --input data/osm/grid_samples.geojson `
+      --input data/mapillary/osm/grid_samples.geojson `
       --cache-dir $CACHE_DIR `
-      --output data/im_meta/mapillary_grid.csv
+      --output data/mapillary/im_meta/mapillary_grid.csv
 
     # 4) Download Mapillary thumbnails
     python 04_mapillary_images.py `
-      --input data/im_meta/mapillary_grid.csv `
-      --output-dir data/images/mapillary `
+      --input data/mapillary/im_meta/mapillary_grid.csv `
+      --output-dir data/mapillary/images `
       --limit 1000
 }
 
 # 5) Image scenic features
 python 05_scenic_model.py `
-  --images-dir data/images/mapillary `
-  --metadata data/im_meta/mapillary_grid.csv `
-  --output data/scores/image_scores.csv
+  --images-dir data/mapillary/images `
+  --metadata data/mapillary/im_meta/mapillary_grid.csv `
+  --output data/mapillary/scores/image_scores.csv
 
 # 6) Grid scenic scores + heatmap
 python 06_grid_scores.py `
-  --samples data/osm/grid_samples.geojson `
-  --metadata data/im_meta/mapillary_grid.csv `
-  --image-scores data/scores/image_scores.csv `
+  --samples data/mapillary/osm/grid_samples.geojson `
+  --metadata data/mapillary/im_meta/mapillary_grid.csv `
+  --image-scores data/mapillary/scores/image_scores.csv `
   --heatmap-output $GRID_HEATMAP_PATH `
-  --output data/geojson/grid_scored.geojson
+  --output data/mapillary/geojson/grid_scored.geojson
 
 # 7) Routes (OSRM)
 python 07_route_candidates.py `
@@ -78,6 +78,7 @@ python 08_view_routes.py `
   --center-lat $ORIGIN_LAT `
   --center-lon $ORIGIN_LON `
   --radius $OVERPASS_RADIUS `
-  --heatmap $GRID_HEATMAP_PATH
+  --heatmap $GRID_HEATMAP_PATH `
+  --source mapillary
 
 Write-Host "Done. Open outputs/routes.html."

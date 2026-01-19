@@ -46,6 +46,7 @@ class RouteHandler(BaseHTTPRequestHandler):
         except ValueError:
             self._send_json(400, {"ok": False, "error": "Invalid coordinates"})
             return
+        source = params.get("source", ["mapillary"])[0]
 
         cmd = [
             "powershell",
@@ -61,6 +62,8 @@ class RouteHandler(BaseHTTPRequestHandler):
             f"{dest_lat:.6f}",
             "-DestLon",
             f"{dest_lon:.6f}",
+            "-Source",
+            source,
         ]
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, check=False)
